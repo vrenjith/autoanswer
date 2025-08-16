@@ -1,0 +1,29 @@
+{
+  "name": "autoanswer-chrome-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension that reads page content and provides AI-powered answers using Google Gemini",
+  "main": "background.js",
+  "scripts": {
+    "build": "echo 'Extension ready for Chrome'",
+    "test": "echo 'No tests specified'",
+    "install-icons": "echo 'Please add icon files to the icons/ directory'",
+    "validate": "echo 'Validating extension files...' && node validate.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "ai",
+    "gemini",
+    "content-analysis",
+    "automation"
+  ],
+  "author": "AutoAnswer Extension",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "bugs": {
+    "url": "."
+  },
+  "homepage": "."
+}
