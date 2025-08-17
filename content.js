@@ -68,21 +68,23 @@ class ScreenReaderPopup {
     this.popup.id = 'screenreader-popup';
     this.popup.innerHTML = `
       <div class="popup-header">
-        <span class="popup-title">ScreenReader</span>
-        <button class="close-btn" id="close-popup">×</button>
+        <span class="popup-title">AI</span>
+        <div class="header-controls">
+          <button class="toggle-input-btn" id="toggle-input-btn" title="Ask Custom Question">?</button>
+          <button class="close-btn" id="close-popup">×</button>
+        </div>
       </div>
       <div class="popup-content">
         <div class="selected-text-section" id="selected-text-section" style="display: none;">
-          <div class="selected-text-label">Selected Text:</div>
+          <div class="selected-text-label">Analyzing:</div>
           <div class="selected-text-content" id="selected-text-content"></div>
-          <button class="manual-mode-btn" id="manual-mode-btn">Ask Custom Question</button>
-        </div>
-        <div class="input-section">
-          <textarea id="question-input" placeholder="Select text and press Ctrl+Shift+A for auto-analysis, or ask a question..." rows="2"></textarea>
-          <button id="ask-btn">Ask Gemini</button>
         </div>
         <div class="answer-section" id="answer-section" style="display: none;">
           <div class="answer-content" id="answer-content"></div>
+        </div>
+        <div class="input-section collapsed" id="input-section" style="display: none;">
+          <textarea id="question-input" placeholder="Ask a custom question about this page..." rows="2"></textarea>
+          <button id="ask-btn">Ask Gemini</button>
         </div>
         <div class="loading" id="loading" style="display: none;">
           <div class="spinner"></div>
@@ -100,13 +102,13 @@ class ScreenReaderPopup {
     const closeBtn = this.popup.querySelector('#close-popup');
     closeBtn.addEventListener('click', () => this.hidePopup());
 
+    // Toggle input section button
+    const toggleInputBtn = this.popup.querySelector('#toggle-input-btn');
+    toggleInputBtn.addEventListener('click', () => this.toggleInputSection());
+
     // Ask button
     const askBtn = this.popup.querySelector('#ask-btn');
     askBtn.addEventListener('click', () => this.handleQuestion());
-
-    // Manual mode button
-    const manualModeBtn = this.popup.querySelector('#manual-mode-btn');
-    manualModeBtn.addEventListener('click', () => this.enableManualMode());
 
     // Enter key in textarea
     const questionInput = this.popup.querySelector('#question-input');
@@ -150,6 +152,12 @@ class ScreenReaderPopup {
     document.addEventListener('mouseup', () => {
       isDragging = false;
       header.style.cursor = 'grab';
+      
+      // If dragged outside viewport, reset to top-right corner
+      const rect = this.popup.getBoundingClientRect();
+      if (rect.right > window.innerWidth || rect.left < 0 || rect.top < 0) {
+        this.resetPopupPosition();
+      }
     });
   }
 
@@ -180,16 +188,12 @@ class ScreenReaderPopup {
   }
 
   async processSelectedText() {
-    // Position popup near the selection
-    this.positionPopupNearSelection();
+    // Always position popup in top-right corner for consistency
+    this.resetPopupPosition();
     this.showPopup();
     
-    // Show the selected text in the popup
-    const selectedTextSection = this.popup.querySelector('#selected-text-section');
-    const selectedTextContent = this.popup.querySelector('#selected-text-content');
-    
-    selectedTextContent.textContent = this.selectedText;
-    selectedTextSection.style.display = 'block';
+    // Don't show "Analyzing:" section - go straight to loading and then answer
+    // This creates a cleaner, answer-focused interface
     
     // Automatically process the selected text
     await this.analyzeSelectedText();
@@ -200,12 +204,8 @@ class ScreenReaderPopup {
     this.resetPopupPosition();
     this.showPopup();
     
-    // Show that we're processing the full page
-    const selectedTextSection = this.popup.querySelector('#selected-text-section');
-    const selectedTextContent = this.popup.querySelector('#selected-text-content');
-    
-    selectedTextContent.textContent = "📄 Processing entire page content...";
-    selectedTextSection.style.display = 'block';
+    // Don't show "Analyzing:" section - go straight to loading and then answer
+    // This creates a cleaner, answer-focused interface
     
     // Automatically process the full page
     await this.analyzeFullPage();
@@ -215,7 +215,7 @@ class ScreenReaderPopup {
     // Position popup near the selection, but keep it visible
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const popupWidth = 350;
+    const popupWidth = 420; // Updated to match CSS width
     const popupHeight = 300;
     
     let x = this.selectionPosition.x + 20; // Offset to avoid covering selection
@@ -321,10 +321,13 @@ class ScreenReaderPopup {
   }
 
   resetPopupPosition() {
-    // Reset to default position (top-right corner)
+    // Reset to default position (top-right corner) and clear any conflicting styles
+    this.popup.style.position = 'fixed';
     this.popup.style.top = '20px';
     this.popup.style.right = '20px';
     this.popup.style.left = 'auto';
+    this.popup.style.bottom = 'auto';
+    this.popup.style.transform = 'none';
   }
 
   showPopup() {
@@ -342,10 +345,31 @@ class ScreenReaderPopup {
     this.resetPopup();
   }
 
+  toggleInputSection() {
+    const inputSection = this.popup.querySelector('#input-section');
+    const toggleBtn = this.popup.querySelector('#toggle-input-btn');
+    
+    if (inputSection.style.display === 'none') {
+      inputSection.style.display = 'block';
+      toggleBtn.textContent = '−';
+      toggleBtn.title = 'Hide Custom Question';
+      toggleBtn.classList.add('active');
+      this.popup.querySelector('#question-input').focus();
+    } else {
+      inputSection.style.display = 'none';
+      toggleBtn.textContent = '?';
+      toggleBtn.title = 'Ask Custom Question';
+      toggleBtn.classList.remove('active');
+    }
+  }
+
   enableManualMode() {
-    // Hide the selected text section and show input for manual questions
+    // Show the input section and hide selected text section
     this.popup.querySelector('#selected-text-section').style.display = 'none';
     this.popup.querySelector('#answer-section').style.display = 'none';
+    this.popup.querySelector('#input-section').style.display = 'block';
+    this.popup.querySelector('#toggle-input-btn').textContent = '−';
+    this.popup.querySelector('#toggle-input-btn').title = 'Hide Custom Question';
     this.popup.querySelector('#question-input').focus();
   }
 
@@ -365,11 +389,21 @@ class ScreenReaderPopup {
     this.popup.querySelector('#answer-section').style.display = 'none';
     this.popup.querySelector('#loading').style.display = 'none';
     this.popup.querySelector('#selected-text-section').style.display = 'none';
+    this.popup.querySelector('#input-section').style.display = 'none';
     
-    // Reset to default position
+    // Reset toggle button
+    const toggleBtn = this.popup.querySelector('#toggle-input-btn');
+    toggleBtn.textContent = '?';
+    toggleBtn.title = 'Ask Custom Question';
+    toggleBtn.classList.remove('active');
+    
+    // Reset to default position (top-right corner) with explicit positioning
+    this.popup.style.position = 'fixed';
     this.popup.style.top = '20px';
     this.popup.style.right = '20px';
     this.popup.style.left = 'auto';
+    this.popup.style.bottom = 'auto';
+    this.popup.style.transform = 'none';
   }
 
   async handleQuestion() {

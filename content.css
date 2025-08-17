@@ -3,12 +3,13 @@
   position: fixed;
   top: 20px;
   right: 20px;
-  width: 350px;
+  width: 420px !important; /* Force the width with !important */
+  max-width: calc(100vw - 40px); /* Ensure it fits on small screens */
   max-height: 500px;
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e0e0e0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* Much more subtle shadow */
+  border: 1px solid #e9ecef; /* Lighter border */
   z-index: 2147483647;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
@@ -28,15 +29,53 @@
 }
 
 #screenreader-popup .popup-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 12px 16px;
+  background: #f8f9fa; /* Very light gray instead of gradient */
+  color: #6c757d; /* Light gray text */
+  padding: 6px 12px; /* Reduced padding for smaller header */
   border-radius: 12px 12px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: grab;
   user-select: none;
+  border-bottom: 1px solid #e9ecef; /* Subtle border */
+  min-height: 32px; /* Minimal height */
+}
+
+#screenreader-popup .header-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#screenreader-popup .toggle-input-btn {
+  background: none;
+  border: none;
+  color: #adb5bd; /* Light gray instead of white */
+  font-size: 16px; /* Slightly smaller */
+  cursor: pointer;
+  padding: 0;
+  width: 20px; /* Smaller button */
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  font-weight: bold;
+  opacity: 0.7; /* Make it subtle */
+}
+
+#screenreader-popup .toggle-input-btn:hover {
+  background-color: rgba(108, 117, 125, 0.1); /* Very light hover */
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+#screenreader-popup .toggle-input-btn.active {
+  background-color: rgba(108, 117, 125, 0.15); /* Light active state */
+  color: #6c757d;
+  opacity: 1;
 }
 
 #screenreader-popup .popup-header:active {
@@ -44,28 +83,33 @@
 }
 
 #screenreader-popup .popup-title {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 500; /* Lighter weight */
+  font-size: 12px; /* Smaller font */
+  color: #adb5bd; /* Very light gray */
+  opacity: 0.7; /* Make it more subtle */
 }
 
 #screenreader-popup .close-btn {
   background: none;
   border: none;
-  color: white;
-  font-size: 20px;
+  color: #adb5bd; /* Light gray instead of white */
+  font-size: 18px; /* Slightly smaller */
   cursor: pointer;
   padding: 0;
-  width: 24px;
-  height: 24px;
+  width: 20px; /* Smaller button */
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  opacity: 0.7; /* Make it subtle */
 }
 
 #screenreader-popup .close-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(220, 53, 69, 0.1); /* Very light red on hover */
+  color: #dc3545; /* Red on hover */
+  opacity: 1;
 }
 
 #screenreader-popup .popup-content {
@@ -73,56 +117,48 @@
 }
 
 #screenreader-popup .selected-text-section {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   border-left: 3px solid #667eea;
 }
 
 #screenreader-popup .selected-text-label {
   font-weight: 600;
   color: #333;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 #screenreader-popup .selected-text-content {
   color: #555;
   font-style: italic;
-  line-height: 1.5;
-  max-height: 80px;
+  line-height: 1.4;
+  max-height: 60px;
   overflow-y: auto;
   background: white;
-  padding: 8px;
+  padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
   margin-bottom: 10px;
-}
-
-#screenreader-popup .manual-mode-btn {
-  background: #f8f9fa;
-  color: #667eea;
-  border: 1px solid #667eea;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  width: 100%;
-}
-
-#screenreader-popup .manual-mode-btn:hover {
-  background: #667eea;
-  color: white;
-  transform: translateY(-1px);
+  font-size: 13px;
 }
 
 #screenreader-popup .input-section {
   margin-bottom: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+#screenreader-popup .input-section.collapsed {
+  display: none !important;
 }
 
 #screenreader-popup #question-input {
@@ -173,17 +209,19 @@
 }
 
 #screenreader-popup .answer-section {
-  max-height: 300px;
+  max-height: 400px; /* Increased height for better readability */
   overflow-y: auto;
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 16px;
+  padding: 20px; /* Increased padding */
   border: 1px solid #e0e0e0;
+  margin-bottom: 12px;
 }
 
 #screenreader-popup .answer-content {
   line-height: 1.6;
   color: #333;
+  font-size: 14px; /* Slightly larger text */
 }
 
 #screenreader-popup .answer-content p {
@@ -227,7 +265,7 @@
 }
 
 /* Responsive design for smaller screens */
-@media (max-width: 480px) {
+@media (max-width: 580px) {
   #screenreader-popup {
     width: calc(100vw - 40px);
     right: 20px;
