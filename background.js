@@ -2,7 +2,16 @@
 class GeminiAPI {
   constructor() {
     this.apiKey = null;
-    this.baseURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    // Try different model names in order of preference
+    this.availableModels = [
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro', 
+      'gemini-pro',
+      'gemini-1.0-pro'
+    ];
+    this.currentModel = this.availableModels[0]; // Default to gemini-2.0-flash
+    this.baseURL = `https://generativelanguage.googleapis.com/v1beta/models/${this.currentModel}:generateContent`;
     this.loadApiKey();
   }
 
@@ -35,31 +44,56 @@ class GeminiAPI {
       }
     };
 
-    try {
-      const response = await fetch(`${this.baseURL}?key=${this.apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+    // Try different models if one fails
+    for (let i = 0; i < this.availableModels.length; i++) {
+      const model = this.availableModels[i];
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`;
       
-      if (data.candidates && data.candidates.length > 0) {
-        return data.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error('No response generated from Gemini');
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.candidates && data.candidates.length > 0) {
+            // Update current model if this one worked
+            this.currentModel = model;
+            this.baseURL = url;
+            return data.candidates[0].content.parts[0].text;
+          } else {
+            throw new Error('No response generated from Gemini');
+          }
+        } else {
+          const errorData = await response.json();
+          const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+          
+          // If it's a model not found error and we have more models to try, continue
+          if (errorMessage.includes('not found') && i < this.availableModels.length - 1) {
+            console.log(`Model ${model} not available, trying next model...`);
+            continue;
+          } else {
+            throw new Error(errorMessage);
+          }
+        }
+      } catch (error) {
+        // If it's a network error or the last model, throw the error
+        if (i === this.availableModels.length - 1) {
+          console.error('Gemini API Error:', error);
+          throw error;
+        } else {
+          console.log(`Error with model ${model}, trying next: ${error.message}`);
+          continue;
+        }
       }
-    } catch (error) {
-      console.error('Gemini API Error:', error);
-      throw error;
     }
+
+    throw new Error('All available Gemini models failed. Please check your API key and try again.');
   }
 
   createPrompt(question, pageContent, pageTitle, pageUrl) {
@@ -125,24 +159,64 @@ async function handleGeminiRequest(request, sendResponse) {
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    // Open options page or show welcome notification
+    // Create context menu for configuration
+    chrome.contextMenus.create({
+      id: 'configure-screenreader',
+      title: 'Configure ScreenReader API Key',
+      contexts: ['action']
+    });
+    
+    // Show welcome notification
     chrome.action.setBadgeText({ text: '!' });
     chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
   }
 });
 
-// Handle extension icon click
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'configure-screenreader') {
+    // Open configuration page
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('config.html')
+    });
+  }
+});
+
+// Handle extension icon click - now activates content script
 chrome.action.onClicked.addListener(async (tab) => {
   try {
-    // Inject content script if not already injected
+    // Check if API key is configured first
+    const result = await chrome.storage.sync.get(['geminiApiKey']);
+    
+    if (!result.geminiApiKey) {
+      // No API key configured - open configuration
+      chrome.tabs.create({
+        url: chrome.runtime.getURL('config.html')
+      });
+      return;
+    }
+    
+    // API key exists - activate the reading interface
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       files: ['content.js']
     });
     
+    // Inject CSS if needed
+    await chrome.scripting.insertCSS({
+      target: { tabId: tab.id },
+      files: ['content.css']
+    });
+    
     // Toggle popup
     await chrome.tabs.sendMessage(tab.id, { action: 'togglePopup' });
+    
   } catch (error) {
-    console.error('Error toggling popup:', error);
+    console.error('Error activating ScreenReader:', error);
+    
+    // Fallback - open configuration if there's an error
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('config.html')
+    });
   }
 });

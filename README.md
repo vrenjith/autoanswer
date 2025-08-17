@@ -1,6 +1,6 @@
-# AutoAnswer Chrome Extension
+# ScreenReader - For the Future
 
-A Chrome extension that reads webpage content and provides AI-powered answers using Google Gemini API. The extension displays a floating popup in the top-right corner where users can ask questions about the current page.
+A Chrome extension that intelligently reads and analyzes webpage content using AI-powered insights from Google Gemini API. The extension displays a floating popup where users can ask questions about the current page content.
 
 ## Features
 
@@ -45,7 +45,7 @@ For a complete installation, add these PNG icon files to the `icons/` directory:
 ## Usage
 
 ### Method 1: Extension Icon
-1. Click the AutoAnswer icon in the Chrome toolbar
+1. Click the ScreenReader icon in the Chrome toolbar
 2. A popup will appear in the top-right corner of the page
 
 ### Method 2: Keyboard Shortcut
@@ -71,7 +71,7 @@ For a complete installation, add these PNG icon files to the `icons/` directory:
 ## File Structure
 
 ```
-AutoAnswer/
+ScreenReader/
 ├── manifest.json          # Extension configuration
 ├── background.js          # Service worker for API communication
 ├── content.js            # Content script for page interaction
@@ -93,7 +93,7 @@ AutoAnswer/
 - You can update or remove the API key anytime through the popup
 
 ### Keyboard Shortcuts
-- `Ctrl+Shift+A`: Toggle the AutoAnswer popup
+- `Ctrl+Shift+A`: Toggle the ScreenReader popup
 - `Enter`: Ask question (when focused in text area)
 - `Shift+Enter`: New line in question text area
 

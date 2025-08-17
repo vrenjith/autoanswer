@@ -1,5 +1,5 @@
-/* AutoAnswer Popup Styles */
-#auto-answer-popup {
+/* ScreenReader Popup Styles */
+#screenreader-popup {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -27,7 +27,7 @@
   }
 }
 
-#auto-answer-popup .popup-header {
+#screenreader-popup .popup-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 12px 16px;
@@ -39,16 +39,16 @@
   user-select: none;
 }
 
-#auto-answer-popup .popup-header:active {
+#screenreader-popup .popup-header:active {
   cursor: grabbing;
 }
 
-#auto-answer-popup .popup-title {
+#screenreader-popup .popup-title {
   font-weight: 600;
   font-size: 16px;
 }
 
-#auto-answer-popup .close-btn {
+#screenreader-popup .close-btn {
   background: none;
   border: none;
   color: white;
@@ -64,19 +64,48 @@
   transition: background-color 0.2s;
 }
 
-#auto-answer-popup .close-btn:hover {
+#screenreader-popup .close-btn:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-#auto-answer-popup .popup-content {
+#screenreader-popup .popup-content {
   padding: 16px;
 }
 
-#auto-answer-popup .input-section {
+#screenreader-popup .selected-text-section {
+  margin-bottom: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 3px solid #667eea;
+}
+
+#screenreader-popup .selected-text-label {
+  font-weight: 600;
+  color: #333;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+#screenreader-popup .selected-text-content {
+  color: #555;
+  font-style: italic;
+  line-height: 1.5;
+  max-height: 80px;
+  overflow-y: auto;
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+#screenreader-popup .input-section {
   margin-bottom: 16px;
 }
 
-#auto-answer-popup #question-input {
+#screenreader-popup #question-input {
   width: 100%;
   padding: 12px;
   border: 2px solid #e0e0e0;
@@ -89,13 +118,13 @@
   transition: border-color 0.2s;
 }
 
-#auto-answer-popup #question-input:focus {
+#screenreader-popup #question-input:focus {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-#auto-answer-popup #ask-btn {
+#screenreader-popup #ask-btn {
   width: 100%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -109,21 +138,21 @@
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-#auto-answer-popup #ask-btn:hover:not(:disabled) {
+#screenreader-popup #ask-btn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-#auto-answer-popup #ask-btn:active:not(:disabled) {
+#screenreader-popup #ask-btn:active:not(:disabled) {
   transform: translateY(0);
 }
 
-#auto-answer-popup #ask-btn:disabled {
+#screenreader-popup #ask-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-#auto-answer-popup .answer-section {
+#screenreader-popup .answer-section {
   max-height: 300px;
   overflow-y: auto;
   background: #f8f9fa;
@@ -132,29 +161,29 @@
   border: 1px solid #e0e0e0;
 }
 
-#auto-answer-popup .answer-content {
+#screenreader-popup .answer-content {
   line-height: 1.6;
   color: #333;
 }
 
-#auto-answer-popup .answer-content p {
+#screenreader-popup .answer-content p {
   margin: 0 0 12px 0;
 }
 
-#auto-answer-popup .answer-content p:last-child {
+#screenreader-popup .answer-content p:last-child {
   margin-bottom: 0;
 }
 
-#auto-answer-popup .answer-content strong {
+#screenreader-popup .answer-content strong {
   color: #2c3e50;
 }
 
-#auto-answer-popup .answer-content .error {
+#screenreader-popup .answer-content .error {
   color: #e74c3c;
   font-weight: 500;
 }
 
-#auto-answer-popup .loading {
+#screenreader-popup .loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,7 +192,7 @@
   color: #666;
 }
 
-#auto-answer-popup .spinner {
+#screenreader-popup .spinner {
   width: 20px;
   height: 20px;
   border: 2px solid #e0e0e0;
@@ -179,7 +208,7 @@
 
 /* Responsive design for smaller screens */
 @media (max-width: 480px) {
-  #auto-answer-popup {
+  #screenreader-popup {
     width: calc(100vw - 40px);
     right: 20px;
     left: 20px;
@@ -187,20 +216,20 @@
 }
 
 /* Scrollbar styling for webkit browsers */
-#auto-answer-popup .answer-section::-webkit-scrollbar {
+#screenreader-popup .answer-section::-webkit-scrollbar {
   width: 6px;
 }
 
-#auto-answer-popup .answer-section::-webkit-scrollbar-track {
+#screenreader-popup .answer-section::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
 
-#auto-answer-popup .answer-section::-webkit-scrollbar-thumb {
+#screenreader-popup .answer-section::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
 
-#auto-answer-popup .answer-section::-webkit-scrollbar-thumb:hover {
+#screenreader-popup .answer-section::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }

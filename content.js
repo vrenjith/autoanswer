@@ -1,24 +1,63 @@
-// Content script that reads page content and handles the floating popup
-class AutoAnswerPopup {
+// Content script that handles text selection and AI analysis
+class ScreenReaderPopup {
   constructor() {
     this.popup = null;
     this.isLoading = false;
+    this.selectedText = '';
+    this.selectionPosition = { x: 0, y: 0 };
     this.initializePopup();
     this.addKeyboardShortcut();
+    this.addSelectionListener();
+  }
+
+  addSelectionListener() {
+    // Track text selection
+    document.addEventListener('mouseup', (e) => {
+      const selection = window.getSelection();
+      const selectedText = selection.toString().trim();
+      
+      if (selectedText.length > 0) {
+        this.selectedText = selectedText;
+        // Store position near the selection
+        this.selectionPosition = {
+          x: e.clientX,
+          y: e.clientY
+        };
+      }
+    });
+
+    // Clear selection tracking when clicking elsewhere
+    document.addEventListener('click', (e) => {
+      // Don't clear if clicking on our popup
+      if (e.target.closest('#screenreader-popup')) {
+        return;
+      }
+      
+      setTimeout(() => {
+        const selection = window.getSelection();
+        if (selection.toString().trim().length === 0) {
+          this.selectedText = '';
+        }
+      }, 100);
+    });
   }
 
   initializePopup() {
     // Create floating popup element
     this.popup = document.createElement('div');
-    this.popup.id = 'auto-answer-popup';
+    this.popup.id = 'screenreader-popup';
     this.popup.innerHTML = `
       <div class="popup-header">
-        <span class="popup-title">AutoAnswer</span>
+        <span class="popup-title">ScreenReader</span>
         <button class="close-btn" id="close-popup">×</button>
       </div>
       <div class="popup-content">
+        <div class="selected-text-section" id="selected-text-section" style="display: none;">
+          <div class="selected-text-label">Selected Text:</div>
+          <div class="selected-text-content" id="selected-text-content"></div>
+        </div>
         <div class="input-section">
-          <textarea id="question-input" placeholder="Ask a question about this page..." rows="2"></textarea>
+          <textarea id="question-input" placeholder="Select text and press Ctrl+Shift+A, or ask a question..." rows="2"></textarea>
           <button id="ask-btn">Ask Gemini</button>
         </div>
         <div class="answer-section" id="answer-section" style="display: none;">
@@ -90,18 +129,97 @@ class AutoAnswerPopup {
   }
 
   addKeyboardShortcut() {
-    // Ctrl+Shift+A to toggle popup
+    // Ctrl+Shift+A to process selected text or toggle popup
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
-        this.togglePopup();
+        
+        // Check if there's selected text
+        if (this.selectedText.length > 0) {
+          // Process selected text automatically
+          this.processSelectedText();
+        } else {
+          // No selection - show popup for manual input
+          this.togglePopup();
+        }
       }
     });
   }
 
+  async processSelectedText() {
+    // Position popup near the selection
+    this.positionPopupNearSelection();
+    this.showPopup();
+    
+    // Show the selected text in the popup
+    const selectedTextSection = this.popup.querySelector('#selected-text-section');
+    const selectedTextContent = this.popup.querySelector('#selected-text-content');
+    
+    selectedTextContent.textContent = this.selectedText;
+    selectedTextSection.style.display = 'block';
+    
+    // Automatically process the selected text
+    await this.analyzeSelectedText();
+  }
+
+  positionPopupNearSelection() {
+    // Position popup near the selection, but keep it visible
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const popupWidth = 350;
+    const popupHeight = 300;
+    
+    let x = this.selectionPosition.x + 20; // Offset to avoid covering selection
+    let y = this.selectionPosition.y - 50;
+    
+    // Keep popup within viewport
+    if (x + popupWidth > viewportWidth) {
+      x = viewportWidth - popupWidth - 20;
+    }
+    if (y + popupHeight > viewportHeight) {
+      y = this.selectionPosition.y - popupHeight - 20;
+    }
+    if (x < 20) x = 20;
+    if (y < 20) y = 20;
+    
+    this.popup.style.left = x + 'px';
+    this.popup.style.top = y + 'px';
+    this.popup.style.right = 'auto'; // Override default positioning
+  }
+
+  async analyzeSelectedText() {
+    this.showLoading();
+    
+    try {
+      // Send selected text to Gemini for analysis
+      const response = await chrome.runtime.sendMessage({
+        action: 'askGemini',
+        question: 'Please analyze and explain this text. Provide a clear summary and any key insights:',
+        pageContent: this.selectedText,
+        pageUrl: window.location.href,
+        pageTitle: document.title
+      });
+
+      this.hideLoading();
+      
+      if (response.success) {
+        this.showAnswer(response.answer);
+      } else {
+        this.showError(response.error);
+      }
+    } catch (error) {
+      this.hideLoading();
+      this.showError('Failed to analyze selected text: ' + error.message);
+    }
+  }
+
   showPopup() {
     this.popup.style.display = 'block';
-    this.popup.querySelector('#question-input').focus();
+    
+    // Only focus input if no selected text (manual mode)
+    if (this.selectedText.length === 0) {
+      this.popup.querySelector('#question-input').focus();
+    }
   }
 
   hidePopup() {
@@ -121,6 +239,12 @@ class AutoAnswerPopup {
     this.popup.querySelector('#question-input').value = '';
     this.popup.querySelector('#answer-section').style.display = 'none';
     this.popup.querySelector('#loading').style.display = 'none';
+    this.popup.querySelector('#selected-text-section').style.display = 'none';
+    
+    // Reset to default position
+    this.popup.style.top = '20px';
+    this.popup.style.right = '20px';
+    this.popup.style.left = 'auto';
   }
 
   async handleQuestion() {
@@ -230,18 +354,18 @@ class AutoAnswerPopup {
 // Initialize the popup when the page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    new AutoAnswerPopup();
+    new ScreenReaderPopup();
   });
 } else {
-  new AutoAnswerPopup();
+  new ScreenReaderPopup();
 }
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'togglePopup') {
-    const popup = document.querySelector('#auto-answer-popup');
+    const popup = document.querySelector('#screenreader-popup');
     if (popup) {
-      const popupInstance = popup.autoAnswerInstance || new AutoAnswerPopup();
+      const popupInstance = popup.screenReaderInstance || new ScreenReaderPopup();
       popupInstance.togglePopup();
     }
   }

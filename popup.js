@@ -86,39 +86,68 @@ document.addEventListener('DOMContentLoaded', function() {
     testConnectionButton.disabled = true;
     testConnectionButton.textContent = 'Testing...';
 
+    // Available models to test
+    const modelsToTest = [
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro', 
+      'gemini-pro',
+      'gemini-1.0-pro'
+    ];
+
     try {
       // Test with a simple prompt
       const testPrompt = 'Hello! Please respond with "Connection successful" if you can read this.';
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: testPrompt
-            }]
-          }]
-        })
-      });
+      let lastError = null;
+      
+      for (const model of modelsToTest) {
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: testPrompt
+                }]
+              }]
+            })
+          });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.candidates && data.candidates.length > 0) {
-          showMessage(testMessage, '✅ Connection successful! API key is working.', 'success');
-          updateStatusIndicator(true);
-        } else {
-          showMessage(testMessage, 'Unexpected response format from API', 'error');
-          updateStatusIndicator(false);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.candidates && data.candidates.length > 0) {
+              showMessage(testMessage, `✅ Connection successful! Using model: ${model}`, 'success');
+              updateStatusIndicator(true);
+              testConnectionButton.disabled = false;
+              testConnectionButton.textContent = 'Test API Connection';
+              return;
+            }
+          } else {
+            const errorData = await response.json();
+            lastError = errorData.error?.message || `HTTP ${response.status}`;
+            
+            // If it's a model not found error, try next model
+            if (lastError.includes('not found')) {
+              continue;
+            } else {
+              throw new Error(lastError);
+            }
+          }
+        } catch (error) {
+          lastError = error.message;
+          // Try next model
+          continue;
         }
-      } else {
-        const errorData = await response.json();
-        const errorMessage = errorData.error?.message || `HTTP ${response.status}`;
-        showMessage(testMessage, `❌ Connection failed: ${errorMessage}`, 'error');
-        updateStatusIndicator(false);
       }
+      
+      // If we get here, all models failed
+      showMessage(testMessage, `❌ Connection failed: ${lastError}`, 'error');
+      updateStatusIndicator(false);
+      
     } catch (error) {
       showMessage(testMessage, `❌ Connection failed: ${error.message}`, 'error');
       updateStatusIndicator(false);

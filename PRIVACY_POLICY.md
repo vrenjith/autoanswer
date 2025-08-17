@@ -1,10 +1,10 @@
-# Privacy Policy for AutoAnswer Chrome Extension
+# Privacy Policy for ScreenReader - For the Future Chrome Extension
 
 **Last Updated:** August 17, 2025
 
 ## Overview
 
-AutoAnswer ("we", "our", or "the extension") is a Chrome browser extension that helps users get AI-powered answers about webpage content using Google's Gemini API. This privacy policy explains how we collect, use, and protect your information.
+ScreenReader - For the Future ("we", "our", or "the extension") is a Chrome browser extension that helps users get AI-powered insights about webpage content using Google's Gemini API. This privacy policy explains how we collect, use, and protect your information.
 
 ## Information We Collect
 
@@ -98,7 +98,7 @@ We may update this privacy policy from time to time. We will notify users of any
 
 For questions about this privacy policy or our privacy practices, please contact:
 
-- **Extension Name**: AutoAnswer Chrome Extension  
+- **Extension Name**: ScreenReader - For the Future Chrome Extension  
 - **Support**: Through Chrome Web Store support page
 - **Policy Questions**: Contact through extension's support channels
 
@@ -112,8 +112,8 @@ This extension and privacy policy comply with:
 
 ## Consent
 
-By installing and using the AutoAnswer extension, you consent to the collection and use of your information as described in this privacy policy.
+By installing and using the ScreenReader - For the Future extension, you consent to the collection and use of your information as described in this privacy policy.
 
 ---
 
-*This privacy policy is effective as of the date listed above and applies to all users of the AutoAnswer Chrome Extension.*
+*This privacy policy is effective as of the date listed above and applies to all users of the ScreenReader - For the Future Chrome Extension.*
