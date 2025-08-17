@@ -155,10 +155,11 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 12px;
+  display: block; /* Default to visible when not collapsed */
 }
 
 #screenreader-popup .input-section.collapsed {
-  display: none !important;
+  display: none;
 }
 
 #screenreader-popup #question-input {

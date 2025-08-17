@@ -349,17 +349,35 @@ class ScreenReaderPopup {
     const inputSection = this.popup.querySelector('#input-section');
     const toggleBtn = this.popup.querySelector('#toggle-input-btn');
     
-    if (inputSection.style.display === 'none') {
+    console.log('Toggle clicked - current display:', inputSection.style.display);
+    console.log('Current classes:', inputSection.className);
+    
+    // Check if input section is hidden (either display: none or not visible)
+    const isHidden = inputSection.style.display === 'none' || 
+                     window.getComputedStyle(inputSection).display === 'none' ||
+                     inputSection.classList.contains('collapsed');
+    
+    console.log('Is hidden:', isHidden);
+    
+    if (isHidden) {
+      // Show the input section
       inputSection.style.display = 'block';
+      inputSection.classList.remove('collapsed');
       toggleBtn.textContent = '−';
       toggleBtn.title = 'Hide Custom Question';
       toggleBtn.classList.add('active');
-      this.popup.querySelector('#question-input').focus();
+      console.log('Showing input section');
+      setTimeout(() => {
+        this.popup.querySelector('#question-input').focus();
+      }, 100);
     } else {
+      // Hide the input section
       inputSection.style.display = 'none';
+      inputSection.classList.add('collapsed');
       toggleBtn.textContent = '?';
       toggleBtn.title = 'Ask Custom Question';
       toggleBtn.classList.remove('active');
+      console.log('Hiding input section');
     }
   }
 
