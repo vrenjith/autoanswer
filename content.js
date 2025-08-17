@@ -5,6 +5,8 @@ class ScreenReaderPopup {
     this.isLoading = false;
     this.selectedText = '';
     this.selectionPosition = { x: 0, y: 0 };
+    this.autoFetchInterval = null;
+    this.lastPageContent = '';
     
     // Check if extension context is valid
     if (!this.checkExtensionContext()) {
@@ -14,6 +16,9 @@ class ScreenReaderPopup {
     this.initializePopup();
     this.addKeyboardShortcut();
     this.addSelectionListener();
+    
+    // Show popup immediately and start auto-fetching
+    this.startAutoMode();
   }
 
   checkExtensionContext() {
@@ -70,6 +75,7 @@ class ScreenReaderPopup {
       <div class="popup-header">
         <span class="popup-title">AI</span>
         <div class="header-controls">
+          <button class="auto-mode-btn" id="auto-mode-btn" title="Toggle Auto Mode (10s updates)">⚡</button>
           <button class="toggle-input-btn" id="toggle-input-btn" title="Ask Custom Question">?</button>
           <button class="close-btn" id="close-popup">×</button>
         </div>
@@ -101,6 +107,10 @@ class ScreenReaderPopup {
     // Close button
     const closeBtn = this.popup.querySelector('#close-popup');
     closeBtn.addEventListener('click', () => this.hidePopup());
+
+    // Auto mode toggle button
+    const autoModeBtn = this.popup.querySelector('#auto-mode-btn');
+    autoModeBtn.addEventListener('click', () => this.toggleAutoMode());
 
     // Toggle input section button
     const toggleInputBtn = this.popup.querySelector('#toggle-input-btn');
@@ -243,7 +253,7 @@ class ScreenReaderPopup {
       // Send selected text to Gemini for analysis
       const response = await this.sendMessageWithRetry({
         action: 'askGemini',
-        question: 'Please provide a SHORT and SIMPLE answer for this question. If there are choices provided, tell what the right answer for the question. Keep it concise, direct, and easy to understand. Avoid complex language and get straight to the point:',
+        question: 'Please provide a SHORT and SIMPLE answer for this question. If there are choices provided, tell what the right answer for the question. If you are not able find the right option, suggest the best possible one. Keep it concise, direct, and easy to understand. Avoid complex language and get straight to the point:',
         pageContent: this.selectedText,
         pageUrl: window.location.href,
         pageTitle: document.title
@@ -333,14 +343,22 @@ class ScreenReaderPopup {
   showPopup() {
     this.popup.style.display = 'block';
     
-    // Focus input only if no selected text and not processing full page
-    const selectedTextSection = this.popup.querySelector('#selected-text-section');
-    if (selectedTextSection.style.display === 'none') {
-      this.popup.querySelector('#question-input').focus();
+    // In auto mode, don't focus input automatically to avoid interruptions
+    if (!this.autoFetchInterval) {
+      // Only focus input in manual mode
+      const selectedTextSection = this.popup.querySelector('#selected-text-section');
+      if (selectedTextSection.style.display === 'none') {
+        this.popup.querySelector('#question-input').focus();
+      }
     }
   }
 
   hidePopup() {
+    // In auto mode, don't allow hiding the popup
+    if (this.autoFetchInterval) {
+      return; // Stay visible in auto mode
+    }
+    
     this.popup.style.display = 'none';
     this.resetPopup();
   }
@@ -525,6 +543,130 @@ class ScreenReaderPopup {
       .replace(/\n\n/g, '</p><p>')
       .replace(/\n/g, '<br>')
       .replace(/^(.*)$/, '<p>$1</p>');
+  }
+
+  startAutoMode() {
+    // Show popup immediately and keep it visible
+    this.resetPopupPosition();
+    this.showPopup();
+    
+    // Update auto mode button to show it's active
+    const autoModeBtn = this.popup.querySelector('#auto-mode-btn');
+    autoModeBtn.textContent = '⏸';
+    autoModeBtn.title = 'Turn off Auto Mode';
+    autoModeBtn.classList.add('active');
+    
+    // Start auto-fetching content every 10 seconds
+    this.startAutoFetch();
+    
+    // Initial analysis
+    this.autoAnalyzePage();
+  }
+
+  startAutoFetch() {
+    // Clear any existing interval
+    if (this.autoFetchInterval) {
+      clearInterval(this.autoFetchInterval);
+    }
+    
+    // Set up auto-fetch every 10 seconds
+    this.autoFetchInterval = setInterval(() => {
+      this.autoAnalyzePage();
+    }, 10000); // 10 seconds
+  }
+
+  stopAutoFetch() {
+    if (this.autoFetchInterval) {
+      clearInterval(this.autoFetchInterval);
+      this.autoFetchInterval = null;
+    }
+  }
+
+  async autoAnalyzePage() {
+    // Don't auto-fetch if user is actively using the extension
+    if (this.isLoading) {
+      return;
+    }
+    
+    try {
+      // Get current page content
+      const currentPageContent = this.extractPageContent();
+      
+      // Always analyze - no optimization checks
+      this.lastPageContent = currentPageContent;
+      
+      // Show subtle loading indication
+      this.showAutoLoading();
+      
+      // Send to Gemini for analysis
+      const response = await this.sendMessageWithRetry({
+        action: 'askGemini',
+        question: 'Auto-update: Please provide a SHORT SUMMARY of this webpage content. Keep it brief and focused on the main points:',
+        pageContent: currentPageContent,
+        pageUrl: window.location.href,
+        pageTitle: document.title
+      });
+
+      this.hideAutoLoading();
+      
+      if (response.success) {
+        this.showAnswer(response.answer);
+      }
+    } catch (error) {
+      this.hideAutoLoading();
+      console.log('Auto-fetch error:', error.message);
+    }
+  }
+
+  hasContentChanged(newContent) {
+    // Check if content has changed significantly (more than 100 characters difference)
+    const contentDiff = Math.abs(newContent.length - this.lastPageContent.length);
+    const textDiff = newContent !== this.lastPageContent;
+    
+    return textDiff && (contentDiff > 100 || this.lastPageContent === '');
+  }
+
+  showAutoLoading() {
+    // Show a subtle loading indicator for auto-updates
+    const answerContent = this.popup.querySelector('#answer-content');
+    if (answerContent.innerHTML.trim() === '') {
+      this.showLoading();
+    } else {
+      // Add a small indicator to existing content
+      answerContent.innerHTML = '<div style="color: #6c757d; font-size: 11px; margin-bottom: 8px;">🔄 Checking for updates...</div>' + answerContent.innerHTML;
+    }
+  }
+
+  hideAutoLoading() {
+    // Remove the auto-loading indicator
+    const answerContent = this.popup.querySelector('#answer-content');
+    const loadingDiv = answerContent.querySelector('div[style*="Checking for updates"]');
+    if (loadingDiv) {
+      loadingDiv.remove();
+    }
+    this.hideLoading();
+  }
+
+  toggleAutoMode() {
+    const autoModeBtn = this.popup.querySelector('#auto-mode-btn');
+    
+    if (this.autoFetchInterval) {
+      // Turn off auto mode
+      this.stopAutoFetch();
+      autoModeBtn.textContent = '⚡';
+      autoModeBtn.title = 'Toggle Auto Mode (10s updates)';
+      autoModeBtn.classList.remove('active');
+    } else {
+      // Turn on auto mode
+      this.startAutoFetch();
+      this.resetPopupPosition();
+      this.showPopup();
+      autoModeBtn.textContent = '⏸';
+      autoModeBtn.title = 'Turn off Auto Mode';
+      autoModeBtn.classList.add('active');
+      // Do initial analysis
+      this.autoAnalyzePage();
+    }
   }
 }
 
