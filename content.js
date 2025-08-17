@@ -243,7 +243,7 @@ class ScreenReaderPopup {
       // Send selected text to Gemini for analysis
       const response = await this.sendMessageWithRetry({
         action: 'askGemini',
-        question: 'Please provide a SHORT and SIMPLE explanation of this text. Keep it concise, direct, and easy to understand. Avoid complex language and get straight to the point:',
+        question: 'Please provide a SHORT and SIMPLE answer for this question. If there are choices provided, tell what the right answer for the question. Keep it concise, direct, and easy to understand. Avoid complex language and get straight to the point:',
         pageContent: this.selectedText,
         pageUrl: window.location.href,
         pageTitle: document.title
