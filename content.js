@@ -5,9 +5,29 @@ class ScreenReaderPopup {
     this.isLoading = false;
     this.selectedText = '';
     this.selectionPosition = { x: 0, y: 0 };
+    
+    // Check if extension context is valid
+    if (!this.checkExtensionContext()) {
+      return;
+    }
+    
     this.initializePopup();
     this.addKeyboardShortcut();
     this.addSelectionListener();
+  }
+
+  checkExtensionContext() {
+    try {
+      // Test if chrome.runtime is accessible
+      if (!chrome.runtime || !chrome.runtime.sendMessage) {
+        console.log('ScreenReader: Extension context not available, skipping initialization');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.log('ScreenReader: Extension context invalid, skipping initialization');
+      return false;
+    }
   }
 
   addSelectionListener() {
@@ -55,9 +75,10 @@ class ScreenReaderPopup {
         <div class="selected-text-section" id="selected-text-section" style="display: none;">
           <div class="selected-text-label">Selected Text:</div>
           <div class="selected-text-content" id="selected-text-content"></div>
+          <button class="manual-mode-btn" id="manual-mode-btn">Ask Custom Question</button>
         </div>
         <div class="input-section">
-          <textarea id="question-input" placeholder="Select text and press Ctrl+Shift+A, or ask a question..." rows="2"></textarea>
+          <textarea id="question-input" placeholder="Select text and press Ctrl+Shift+A for auto-analysis, or ask a question..." rows="2"></textarea>
           <button id="ask-btn">Ask Gemini</button>
         </div>
         <div class="answer-section" id="answer-section" style="display: none;">
@@ -82,6 +103,10 @@ class ScreenReaderPopup {
     // Ask button
     const askBtn = this.popup.querySelector('#ask-btn');
     askBtn.addEventListener('click', () => this.handleQuestion());
+
+    // Manual mode button
+    const manualModeBtn = this.popup.querySelector('#manual-mode-btn');
+    manualModeBtn.addEventListener('click', () => this.enableManualMode());
 
     // Enter key in textarea
     const questionInput = this.popup.querySelector('#question-input');
@@ -129,7 +154,7 @@ class ScreenReaderPopup {
   }
 
   addKeyboardShortcut() {
-    // Ctrl+Shift+A to process selected text or toggle popup
+    // Ctrl+Shift+A to process selected text or full page
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'A') {
         e.preventDefault();
@@ -139,8 +164,16 @@ class ScreenReaderPopup {
           // Process selected text automatically
           this.processSelectedText();
         } else {
-          // No selection - show popup for manual input
-          this.togglePopup();
+          // No selection - process entire page content
+          this.processFullPage();
+        }
+      }
+      
+      // Escape key to dismiss popup
+      if (e.key === 'Escape') {
+        if (this.popup && this.popup.style.display === 'block') {
+          e.preventDefault();
+          this.hidePopup();
         }
       }
     });
@@ -160,6 +193,22 @@ class ScreenReaderPopup {
     
     // Automatically process the selected text
     await this.analyzeSelectedText();
+  }
+
+  async processFullPage() {
+    // Position popup in default location (top-right)
+    this.resetPopupPosition();
+    this.showPopup();
+    
+    // Show that we're processing the full page
+    const selectedTextSection = this.popup.querySelector('#selected-text-section');
+    const selectedTextContent = this.popup.querySelector('#selected-text-content');
+    
+    selectedTextContent.textContent = "📄 Processing entire page content...";
+    selectedTextSection.style.display = 'block';
+    
+    // Automatically process the full page
+    await this.analyzeFullPage();
   }
 
   positionPopupNearSelection() {
@@ -192,9 +241,9 @@ class ScreenReaderPopup {
     
     try {
       // Send selected text to Gemini for analysis
-      const response = await chrome.runtime.sendMessage({
+      const response = await this.sendMessageWithRetry({
         action: 'askGemini',
-        question: 'Please analyze and explain this text. Provide a clear summary and any key insights:',
+        question: 'Please provide a SHORT and SIMPLE explanation of this text. Keep it concise, direct, and easy to understand. Avoid complex language and get straight to the point:',
         pageContent: this.selectedText,
         pageUrl: window.location.href,
         pageTitle: document.title
@@ -213,11 +262,77 @@ class ScreenReaderPopup {
     }
   }
 
+  async analyzeFullPage() {
+    this.showLoading();
+    
+    try {
+      // Get full page content
+      const pageContent = this.extractPageContent();
+      
+      // Send full page content to Gemini for analysis
+      const response = await this.sendMessageWithRetry({
+        action: 'askGemini',
+        question: 'Please provide a SHORT SUMMARY of this webpage. Keep it brief, clear, and direct. Focus on the main points only - avoid lengthy explanations:',
+        pageContent: pageContent,
+        pageUrl: window.location.href,
+        pageTitle: document.title
+      });
+
+      this.hideLoading();
+      
+      if (response.success) {
+        this.showAnswer(response.answer);
+      } else {
+        this.showError(response.error);
+      }
+    } catch (error) {
+      this.hideLoading();
+      this.showError('Failed to analyze page content: ' + error.message);
+    }
+  }
+
+  // Helper method to handle extension context invalidation
+  async sendMessageWithRetry(message, maxRetries = 2) {
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        // Check if chrome.runtime is available
+        if (!chrome.runtime || !chrome.runtime.sendMessage) {
+          throw new Error('Extension context not available. Please reload the page.');
+        }
+
+        const response = await chrome.runtime.sendMessage(message);
+        return response;
+      } catch (error) {
+        if (error.message.includes('Extension context invalidated') || 
+            error.message.includes('receiving end does not exist') ||
+            error.message.includes('message port closed')) {
+          
+          if (i === maxRetries) {
+            throw new Error('Extension context invalidated. Please reload the page to use ScreenReader again.');
+          }
+          
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  resetPopupPosition() {
+    // Reset to default position (top-right corner)
+    this.popup.style.top = '20px';
+    this.popup.style.right = '20px';
+    this.popup.style.left = 'auto';
+  }
+
   showPopup() {
     this.popup.style.display = 'block';
     
-    // Only focus input if no selected text (manual mode)
-    if (this.selectedText.length === 0) {
+    // Focus input only if no selected text and not processing full page
+    const selectedTextSection = this.popup.querySelector('#selected-text-section');
+    if (selectedTextSection.style.display === 'none') {
       this.popup.querySelector('#question-input').focus();
     }
   }
@@ -227,11 +342,21 @@ class ScreenReaderPopup {
     this.resetPopup();
   }
 
+  enableManualMode() {
+    // Hide the selected text section and show input for manual questions
+    this.popup.querySelector('#selected-text-section').style.display = 'none';
+    this.popup.querySelector('#answer-section').style.display = 'none';
+    this.popup.querySelector('#question-input').focus();
+  }
+
   togglePopup() {
     if (this.popup.style.display === 'block') {
       this.hidePopup();
     } else {
+      // Show popup in manual mode (for clicking extension icon)
+      this.resetPopupPosition();
       this.showPopup();
+      this.enableManualMode();
     }
   }
 
@@ -265,7 +390,7 @@ class ScreenReaderPopup {
       const pageContent = this.extractPageContent();
       
       // Send to background script for Gemini API call
-      const response = await chrome.runtime.sendMessage({
+      const response = await this.sendMessageWithRetry({
         action: 'askGemini',
         question: question,
         pageContent: pageContent,
@@ -354,10 +479,18 @@ class ScreenReaderPopup {
 // Initialize the popup when the page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    new ScreenReaderPopup();
+    try {
+      new ScreenReaderPopup();
+    } catch (error) {
+      console.log('ScreenReader: Failed to initialize:', error.message);
+    }
   });
 } else {
-  new ScreenReaderPopup();
+  try {
+    new ScreenReaderPopup();
+  } catch (error) {
+    console.log('ScreenReader: Failed to initialize:', error.message);
+  }
 }
 
 // Listen for messages from popup

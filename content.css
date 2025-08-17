@@ -99,6 +99,26 @@
   padding: 8px;
   border-radius: 4px;
   border: 1px solid #e0e0e0;
+  margin-bottom: 10px;
+}
+
+#screenreader-popup .manual-mode-btn {
+  background: #f8f9fa;
+  color: #667eea;
+  border: 1px solid #667eea;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+#screenreader-popup .manual-mode-btn:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
 }
 
 #screenreader-popup .input-section {

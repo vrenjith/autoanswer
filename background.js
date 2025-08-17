@@ -40,7 +40,7 @@ class GeminiAPI {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024
+        maxOutputTokens: 512
       }
     };
 
@@ -97,7 +97,9 @@ class GeminiAPI {
   }
 
   createPrompt(question, pageContent, pageTitle, pageUrl) {
-    return `You are a helpful AI assistant. A user is asking a question about a web page. Here's the context:
+    return `You are a helpful AI assistant. A user is asking a question about a web page. 
+
+IMPORTANT: Please provide SHORT, DIRECT, and SIMPLE answers. Avoid long explanations. Be concise and get straight to the point.
 
 Page Title: ${pageTitle}
 Page URL: ${pageUrl}
@@ -107,7 +109,7 @@ ${pageContent}
 
 User Question: ${question}
 
-Please provide a helpful and accurate answer based on the page content. If the question cannot be answered from the page content, let the user know and provide general guidance if possible. Keep your response concise but informative.`;
+Please provide a brief, clear answer based on the page content. Keep your response short and easy to understand. If the question cannot be answered from the page content, briefly let the user know and provide simple guidance if possible.`;
   }
 }
 
